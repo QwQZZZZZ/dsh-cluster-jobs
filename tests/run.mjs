@@ -205,6 +205,102 @@ await test('password mode requires an existing password file', async () => {
   await assert.rejects(() => missing.execute({ action: 'check' }, { signal }), /passwordFile does not exist/)
 })
 
+const multiConfigPath = join(mockDir, 'multi.json')
+writeFileSync(multiConfigPath, JSON.stringify({
+  defaultCluster: 'ccds',
+  clusters: {
+    ccds: { ...baseConfig, stateDir: join(mockDir, 'state-multi') },
+    nscc: {
+      host: 'pbs-cluster.example',
+      user: 'testuser',
+      scheduler: 'pbs',
+      authMode: 'key',
+      remoteRoot: '~/dsh-jobs',
+      stateDir: join(mockDir, 'state-multi'),
+      sshBinary: baseConfig.sshBinary,
+      sshPrefixArgs: baseConfig.sshPrefixArgs,
+      scpBinary: baseConfig.scpBinary,
+      scpPrefixArgs: baseConfig.scpPrefixArgs,
+      pbs: { queue: 'normal', project: '11001234', ngpus: '1', ncpus: '14', mem: '110gb', walltime: '00:05:00' },
+    },
+  },
+}, null, 2))
+const multi = loadTool({}, multiConfigPath)
+const callMulti = (args) => multi.execute(args, { signal })
+
+await test('the default cluster is used when none is named', async () => {
+  const value = await callMulti({ action: 'check' })
+  assert.equal(value.cluster, 'ccds')
+  assert.equal(value.scheduler, 'slurm')
+})
+
+await test('check reports the PBS client on the nscc cluster', async () => {
+  const value = await callMulti({ action: 'check', cluster: 'nscc' })
+  assert.equal(value.cluster, 'nscc')
+  assert.equal(value.scheduler, 'pbs')
+  assert.equal(value.ok, true)
+  assert.equal(value.facts.qsub, '/usr/local/bin/qsub')
+})
+
+await test('submit translates options into qsub flags', async () => {
+  const value = await callMulti({
+    action: 'submit',
+    cluster: 'nscc',
+    jobName: 'pbs-smoke',
+    script: '#!/bin/bash\n#PBS -N pbs-smoke\necho hi\n',
+  })
+  assert.equal(value.jobId, '1852792.pbs101')
+  assert.equal(value.scheduler, 'pbs')
+  assert.match(value.directory, /^~\/dsh-jobs\/pbs-smoke-/)
+  assert.match(value.summary, /Submitted job 1852792\.pbs101/)
+  const logged = readFileSync(join(mockDir, 'ssh-commands.log'), 'utf8').trim().split('\n')
+    .map(line => JSON.parse(line))
+  const command = logged.map(argv => argv[argv.length - 1]).filter(text => text.includes('qsub ')).pop()
+  assert.match(command, /qsub /)
+  assert.match(command, /-N='pbs-smoke'/)
+  assert.match(command, /-q='normal'/)
+  assert.match(command, /-P='11001234'/)
+  assert.match(command, /select=1:ngpus=1:ncpus=14:mem=110gb/)
+  assert.match(command, /walltime=00:05:00/)
+})
+
+await test('pbs status reads a running job', async () => {
+  const value = await callMulti({ action: 'status', cluster: 'nscc', jobId: '1852792.pbs101' })
+  assert.equal(value.job.state, 'RUNNING')
+  assert.equal(value.job.partition, 'normal')
+  assert.match(value.summary, /RUNNING/)
+})
+
+await test('pbs status falls back to history for a finished job', async () => {
+  const value = await callMulti({ action: 'status', cluster: 'nscc', jobId: '1852793.pbs101' })
+  assert.equal(value.job.state, 'FINISHED')
+  assert.equal(value.job.exitCode, '0')
+  assert.match(value.summary, /FINISHED.*exit 0/)
+})
+
+await test('pbs logs use the output path reported by qstat', async () => {
+  const value = await callMulti({ action: 'logs', cluster: 'nscc', jobId: '1852792.pbs101' })
+  assert.equal(value.path, '/home/testuser/dsh-jobs/pbs-smoke.o1852792')
+  assert.match(value.text, /epoch 2 loss 1.04/)
+})
+
+await test('pbs queue parses qstat rows', async () => {
+  const value = await callMulti({ action: 'queue', cluster: 'nscc' })
+  assert.equal(value.jobs.length, 1)
+  assert.equal(value.jobs[0].jobId, '1852792.pbs101')
+  assert.equal(value.jobs[0].state, 'RUNNING')
+})
+
+await test('pbs cancel uses qdel', async () => {
+  const value = await callMulti({ action: 'cancel', cluster: 'nscc', jobId: '1852792.pbs101' })
+  assert.equal(value.ok, true)
+  assert.match(value.summary, /Cancelled job 1852792\.pbs101/)
+})
+
+await test('an unknown cluster name is rejected', async () => {
+  await assert.rejects(() => callMulti({ action: 'check', cluster: 'nowhere' }), /Unknown cluster/)
+})
+
 await test('unknown actions are rejected', async () => {
   await assert.rejects(() => call({ action: 'explode' }), /Unknown action/)
 })

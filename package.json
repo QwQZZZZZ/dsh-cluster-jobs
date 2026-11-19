@@ -1,9 +1,9 @@
 {
   "name": "@local/cluster-jobs",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Submit and manage SLURM jobs on a remote cluster over SSH.",
+  "description": "Submit and manage SLURM or PBS jobs on remote HPC clusters over SSH.",
   "exports": {
     ".": "./index.js",
     "./locale/*.json": "./locale/*.json",

@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Cluster jobs",
-    "description": "Submits and follows SLURM jobs on a remote GPU cluster over SSH through the cluster_job tool: check connectivity, upload a job script with sbatch, watch the queue, tail logs, cancel jobs, and move files. Host, account, and credentials come from a JSON file (.dsh-cluster.json in the workspace or <DSH_HOME>/cluster.json); a private key or a stored password can authenticate, and the password never appears in a command line. Network access such as the campus VPN is required for a private cluster address. GPU work runs on compute nodes only through submit, and nothing is submitted until you call the tool.",
+    "description": "Submits and follows SLURM or PBS jobs on one or more remote HPC clusters over SSH through the cluster_job tool: check connectivity, upload a job script with sbatch or qsub, watch the queue, tail logs, cancel jobs, and move files. Use the cluster parameter to switch between configured clusters such as an on-prem Slurm system and NSCC ASPIRE 2A (PBS). Host, account, and credentials come from a JSON file (.dsh-cluster.json in the workspace or <DSH_HOME>/cluster.json); a private key or a stored password can authenticate, and the password never appears in a command line. Network access such as the campus VPN and, for NSCC, a jump host are required for private cluster addresses. GPU work runs on compute nodes only through submit, and nothing is submitted until you call the tool.",
     "detail": "docs/DETAIL.md"
   }
 }

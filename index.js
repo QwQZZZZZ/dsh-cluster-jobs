@@ -6,7 +6,8 @@
  * DSH profile patch.
  */
 import { runAction } from './lib/actions.js'
-import { configCandidates, connectionProblems, loadConfig } from './lib/config.js'
+import { configCandidates, loadConfig } from './lib/config.js'
+import { resolveClusters, selectCluster } from './lib/clusters.js'
 import { debugLog } from './lib/state.js'
 
 /** Stable Loader identity. */
@@ -25,6 +26,7 @@ const ACTIONS = ['check', 'submit', 'status', 'queue', 'logs', 'cancel', 'exec',
  */
 function renderResult(value) {
   const parts = [String(value.summary ?? '')]
+  if (value.cluster) parts.push(`cluster: ${value.cluster}${value.scheduler ? ` (${value.scheduler})` : ''}`)
   if (value.target) parts.push(`target: ${value.target}`)
   if (value.configSource) parts.push(`config: ${value.configSource}`)
   if (value.directory) parts.push(`remote directory: ${value.directory}`)
@@ -90,10 +92,11 @@ export function apply(ctx, patchConfig = {}) {
   const tool = {
     name: 'cluster_job',
     description:
-      'Submit and follow SLURM jobs on the configured remote GPU cluster over SSH. '
-      + 'Actions: check (connectivity and Slurm tooling), submit (upload `script` or `scriptPath` and run sbatch, returns a job id), '
+      'Submit and follow SLURM or PBS jobs on a configured remote cluster over SSH. '
+      + 'Actions: check (connectivity and scheduler tooling), submit (upload `script` or `scriptPath` and run sbatch or qsub, returns a job id), '
       + 'status (one job; omit jobId to list the queue), queue (all your active jobs), logs (tail the job stdout or stderr), '
       + 'cancel, exec (run a shell command on the login node), upload and download (files between this machine and the cluster). '
+      + 'Set `cluster` to choose between configured clusters; it defaults to defaultCluster. '
       + 'Remote paths are POSIX and may start with `~/`; local paths resolve against the session working directory. '
       + 'GPU work must be submitted, not started on the login node. '
       + 'Connection settings come from a JSON file (see the bundle README); an SSH key authorized on the cluster or a stored password, plus network access such as the campus VPN, are required.',
@@ -106,9 +109,13 @@ export function apply(ctx, patchConfig = {}) {
           enum: ACTIONS,
           description: 'Operation to perform.',
         },
+        cluster: {
+          type: 'string',
+          description: 'Configured cluster name; defaults to defaultCluster.',
+        },
         jobId: {
           type: 'string',
-          description: 'Slurm job id. Required by status, logs, and cancel.',
+          description: 'Job id: a Slurm numeric id or a PBS id such as 1852792.pbs101. Required by status, logs, and cancel.',
         },
         jobName: {
           type: 'string',
@@ -116,7 +123,7 @@ export function apply(ctx, patchConfig = {}) {
         },
         script: {
           type: 'string',
-          description: 'Inline bash job script for submit, including any #SBATCH lines.',
+          description: 'Inline job script for submit, including any #SBATCH or #PBS lines.',
         },
         scriptPath: {
           type: 'string',
@@ -129,7 +136,7 @@ export function apply(ctx, patchConfig = {}) {
         options: {
           type: 'object',
           additionalProperties: true,
-          description: 'SLURM submission overrides for submit: partition, qos, account, time, gpus, gres, cpusPerTask, mem, nodes, dependency, output, error, exclusive, extra (array of raw sbatch arguments).',
+          description: 'Submission overrides for submit. SLURM: partition, qos, account, time, gpus, gres, cpusPerTask, mem, nodes, dependency, output, error, exclusive. PBS: queue, project, walltime, ngpus, ncpus, mem, select. Both: extra (array of raw scheduler arguments).',
           properties: {
             partition: { type: 'string' },
             qos: { type: 'string' },
@@ -145,6 +152,12 @@ export function apply(ctx, patchConfig = {}) {
             output: { type: 'string' },
             error: { type: 'string' },
             exclusive: { type: 'boolean' },
+            queue: { type: 'string' },
+            project: { type: 'string' },
+            walltime: { type: 'string' },
+            ngpus: { type: 'string' },
+            ncpus: { type: 'string' },
+            select: { type: 'string' },
             extra: { type: 'array', items: { type: 'string' } },
           },
         },
@@ -161,7 +174,7 @@ export function apply(ctx, patchConfig = {}) {
         },
         path: {
           type: 'string',
-          description: 'Explicit remote log path for logs; defaults to the recorded slurm-<jobId>.out or .err.',
+          description: 'Explicit remote log path for logs; defaults to the path recorded at submit time.',
         },
         command: {
           type: 'string',
@@ -198,20 +211,29 @@ export function apply(ctx, patchConfig = {}) {
       if (loaded.problems.length > 0) {
         throw new Error(`Cluster jobs configuration is invalid: ${loaded.problems.join('; ')}. Fix ${loaded.source || 'the configuration file'}.`)
       }
-      const problems = connectionProblems(loaded.config)
-      if (problems.length > 0) {
+      const resolved = resolveClusters(loaded.config)
+      if (resolved.problems.length > 0) {
         throw new Error(
-          `Cluster connection is not configured: ${problems.join('; ')}. `
-          + `Create a JSON file with host, user, and identityFile (searched: ${configCandidates(patchConfig, cwd).join(', ')}). `
-          + 'See this bundle README for the format.',
+          `Cluster jobs configuration is invalid: ${resolved.problems.join('; ')}. `
+          + `Fix ${loaded.source || 'the configuration file'}.`,
+        )
+      }
+      const cluster = selectCluster(resolved, args?.cluster)
+      const clusterProblems = resolved.clusterProblems[cluster.name] ?? []
+      if (clusterProblems.length > 0) {
+        throw new Error(
+          `Cluster "${cluster.name}" is not configured: ${clusterProblems.join('; ')}. `
+          + `Fix that entry in ${loaded.source || 'the configuration file'} (searched: ${configCandidates(patchConfig, cwd).join(', ')}).`,
         )
       }
       const env = {
-        config: loaded.config,
+        config: cluster,
+        cluster,
+        clusters: resolved.clusters,
         source: loaded.source,
         cwd,
         signal: exec.signal,
-        debug: (event) => debugLog(loaded.config, event),
+        debug: (event) => debugLog(cluster, event),
       }
       return runAction(env, args ?? {})
     },

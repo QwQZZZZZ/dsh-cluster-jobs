@@ -38,7 +38,10 @@ if (command.includes('hostname=')) {
   out('home=/home/testuser')
   out('sbatch=/usr/bin/sbatch')
   out('sbatch-version=slurm 24.05.4')
+  out('qsub=/usr/local/bin/qsub')
+  out('qsub-version=PBS Pro 2021.1.3')
   out('sinfo=slurm 24.05.4')
+  out('qstat=/usr/local/bin/qstat')
   out('qos=normal')
   process.exit(0)
 }
@@ -79,6 +82,50 @@ if (command.includes('tail -n')) {
 }
 
 if (command.includes('scancel')) {
+  process.exit(0)
+}
+
+if (command.includes('qsub ')) {
+  out('1852792.pbs101')
+  process.exit(0)
+}
+
+if (command.includes('qstat -x -f')) {
+  if (command.includes('1852793')) {
+    out('Job Id: 1852793.pbs101')
+    out('    Job_Name = pbs-done')
+    out('    job_state = F')
+    out('    queue = normal')
+    out('    exec_host = a2a-node03/0-13')
+    out('    resources_used.walltime = 00:02:00')
+    out('    Exit_status = 0')
+    out('    Output_Path = login01:/home/testuser/dsh-jobs/pbs-done.o1852793')
+  }
+  process.exit(0)
+}
+
+if (command.includes('qstat -f')) {
+  if (command.includes('1852792')) {
+    out('Job Id: 1852792.pbs101')
+    out('    Job_Name = pbs-smoke')
+    out('    job_state = R')
+    out('    queue = normal')
+    out('    exec_host = a2a-node01/0-13')
+    out('    resources_used.walltime = 00:01:00')
+    out('    Output_Path = login01:/home/testuser/dsh-jobs/pbs-smoke.o1852792')
+    out('    Error_Path = login01:/home/testuser/dsh-jobs/pbs-smoke.e1852792')
+  }
+  process.exit(0)
+}
+
+if (command.includes('qstat -u')) {
+  out('Job ID                    Name             User            Time Use S Queue')
+  out('------------------------- ---------------- --------------- -------- - -----')
+  out('1852792.pbs101            pbs-smoke        testuser        00:01:00 R normal')
+  process.exit(0)
+}
+
+if (command.includes('qdel')) {
   process.exit(0)
 }
 

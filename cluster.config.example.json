@@ -1,18 +1,44 @@
 {
-  "host": "cluster.example.edu",
-  "user": "your-account",
-  "port": 22,
-  "authMode": "key",
-  "identityFile": "C:/Users/you/.ssh/cluster_key",
-  "remoteRoot": "~/dsh-jobs",
-  "connectTimeoutSeconds": 15,
-  "commandTimeoutMs": 90000,
-  "knownHostsPolicy": "accept-new",
-  "debug": false,
-  "slurm": {
-    "partition": "gpu-partition",
-    "qos": "",
-    "gpus": "1",
-    "time": "01:00:00"
+  "defaultCluster": "ccds",
+  "clusters": {
+    "ccds": {
+      "scheduler": "slurm",
+      "host": "slurm-cluster.example.edu",
+      "user": "your-account",
+      "port": 22,
+      "authMode": "key",
+      "identityFile": "C:/Users/you/.ssh/cluster_key",
+      "remoteRoot": "~/dsh-jobs",
+      "connectTimeoutSeconds": 15,
+      "commandTimeoutMs": 90000,
+      "knownHostsPolicy": "accept-new",
+      "debug": false,
+      "slurm": {
+        "partition": "gpu-partition",
+        "qos": "",
+        "gpus": "1",
+        "time": "01:00:00"
+      }
+    },
+    "nscc": {
+      "scheduler": "pbs",
+      "host": "aspire2antu.nscc.sg",
+      "user": "your-nscc-id",
+      "port": 22,
+      "authMode": "key",
+      "identityFile": "C:/Users/you/.ssh/nscc_key",
+      "sshPrefixArgs": ["-J", "you@ntu-jump.example.edu"],
+      "scpPrefixArgs": ["-J", "you@ntu-jump.example.edu"],
+      "remoteRoot": "~/dsh-jobs",
+      "knownHostsPolicy": "accept-new",
+      "pbs": {
+        "queue": "normal",
+        "project": "00000000",
+        "ngpus": "1",
+        "ncpus": "14",
+        "mem": "110gb",
+        "walltime": "01:00:00"
+      }
+    }
   }
 }
