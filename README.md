@@ -181,3 +181,7 @@ and per-option argv handling. It also confirms that CRLF script files become LF.
   `upload`/`download` (SHA-256 match) with password authentication.
 - PBS is covered by the mock suite only; a live ASPIRE 2A run still needs the
   NSCC network path, an NSCC account, and an authorized key.
+
+## License
+
+MIT — see [LICENSE](LICENSE). Copyright (c) 2026 QwQZZZZZ.
