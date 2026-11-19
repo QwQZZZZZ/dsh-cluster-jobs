@@ -1,0 +1,18 @@
+{
+  "host": "cluster.example.edu",
+  "user": "your-account",
+  "port": 22,
+  "authMode": "key",
+  "identityFile": "C:/Users/you/.ssh/cluster_key",
+  "remoteRoot": "~/dsh-jobs",
+  "connectTimeoutSeconds": 15,
+  "commandTimeoutMs": 90000,
+  "knownHostsPolicy": "accept-new",
+  "debug": false,
+  "slurm": {
+    "partition": "gpu-partition",
+    "qos": "",
+    "gpus": "1",
+    "time": "01:00:00"
+  }
+}

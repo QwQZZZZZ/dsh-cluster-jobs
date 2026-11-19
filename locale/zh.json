@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "集群作业",
+    "description": "通过 cluster_job 工具在远程 GPU 集群上用 SSH 提交并跟踪 SLURM 作业：检查连通性与 Slurm 环境、上传作业脚本并执行 sbatch、查看队列、读取日志、取消作业以及在本地和集群之间传输文件。主机、账号和凭据来自 JSON 配置文件（工作区的 .dsh-cluster.json 或 <DSH_HOME>/cluster.json），支持 SSH 私钥或本地保存的密码，密码不会出现在命令行里。私有地址需要校园 VPN 等网络访问方式。GPU 计算只能通过 submit 进入计算节点，在你调用工具之前不会提交任何作业。"
+  }
+}

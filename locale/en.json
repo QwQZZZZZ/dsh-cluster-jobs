@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Cluster jobs",
+    "description": "Submits and follows SLURM jobs on a remote GPU cluster over SSH through the cluster_job tool: check connectivity, upload a job script with sbatch, watch the queue, tail logs, cancel jobs, and move files. Host, account, and credentials come from a JSON file (.dsh-cluster.json in the workspace or <DSH_HOME>/cluster.json); a private key or a stored password can authenticate, and the password never appears in a command line. Network access such as the campus VPN is required for a private cluster address. GPU work runs on compute nodes only through submit, and nothing is submitted until you call the tool.",
+    "detail": "docs/DETAIL.md"
+  }
+}

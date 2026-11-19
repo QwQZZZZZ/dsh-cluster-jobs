@@ -1,0 +1,17 @@
+# Local configuration and secrets are never committed.
+.dsh-cluster.json
+cluster.config.json
+*.password
+*password*.txt
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Local test artifacts.
+tests/.mock/
+
+# Tooling.
+node_modules/
+.DS_Store
+Thumbs.db
